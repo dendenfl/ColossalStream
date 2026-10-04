@@ -114,7 +114,7 @@ export class VideoPlayer {
         this.loadingScreen.classList.add('hidden');
         this.loadingScreen.style.display = 'none';
       }
-    }, 450);
+    }, 200);
   }
 
   updateStreamPlaybackState(started) {
@@ -151,7 +151,7 @@ export class VideoPlayer {
         </iframe>
 
         <!-- Cinematic Loading Screen: High-Res Backdrop + Poster + Sleek Small Center Loading Circle -->
-        <div id="player-loading-screen" class="absolute inset-0 z-28 bg-black flex flex-col items-center justify-center overflow-hidden transition-opacity duration-500 pointer-events-none">
+        <div id="player-loading-screen" class="absolute inset-0 z-28 bg-black flex flex-col items-center justify-center overflow-hidden transition-opacity duration-200 pointer-events-none">
           <!-- Blurred Backdrop Image -->
           <img id="player-loading-backdrop" class="absolute inset-0 w-full h-full object-cover opacity-45 scale-105 filter blur-md transition-opacity duration-500" src="" alt="" />
           <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/70"></div>

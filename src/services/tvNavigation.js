@@ -185,11 +185,12 @@ export class TvNavigation {
     if (track) {
       // Anchored First-Stop Navigation (Netflix/Apple TV style):
       // The selector always stays on the first content slot on the left,
-      // and the track smoothly scrolls to pull the rest of the content through this first stop.
+      // and the track scrolls to pull the rest of the content through this first stop.
+      // Uses instant ('auto') scrolling: 'smooth' animations queue up and stutter
+      // when the user presses left/right rapidly on a D-pad.
       const cardLeft = element.offsetLeft;
       const targetScroll = Math.max(0, cardLeft - 4);
-      const isRepeat = (this.lastRepeatCount || 0) > 0;
-      track.scrollTo({ left: targetScroll, behavior: isRepeat ? 'auto' : 'smooth' });
+      track.scrollTo({ left: targetScroll, behavior: 'auto' });
 
       // Only scroll vertically if the row is currently outside or partially cut off
       const rowContainer = element.closest('.media-row-container') || element.closest('section');
@@ -779,37 +780,23 @@ export class TvNavigation {
       document.getElementById('dashboard-main') ||
       document.body;
 
-    const currentTrackRect = currentTrack.getBoundingClientRect();
-    const currentCardRect = currentCard.getBoundingClientRect();
-    const currentCenterX = currentCardRect.left + currentCardRect.width / 2;
-
-    // Find all valid visible tracks with cards (excluding the current one)
-    const candidateTracks = Array.from(activePage.querySelectorAll('.media-row-track')).filter(track => {
-      if (track === currentTrack) return false;
+    // Find all visible tracks in DOM order (matches visual top-to-bottom for
+    // stacked rows). Avoids getBoundingClientRect() per track, which forced
+    // a synchronous layout on every keypress and caused lag on TV boxes.
+    const allTracks = Array.from(activePage.querySelectorAll('.media-row-track')).filter(track => {
+      if (track.classList.contains('hidden') || track.style.display === 'none') return false;
       const container = track.closest('.media-row-container') || track.closest('section') || track.parentElement;
       if (container && (container.classList.contains('hidden') || container.style.display === 'none')) return false;
-      return track.querySelectorAll('.media-card').length > 0;
+      return track.querySelector('.media-card') !== null;
     });
 
-    if (candidateTracks.length === 0) return null;
+    const currentIdx = allTracks.indexOf(currentTrack);
+    if (currentIdx === -1) return null;
 
-    let targetTrack = null;
+    const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+    if (targetIdx < 0 || targetIdx >= allTracks.length) return null;
 
-    if (direction === 'up') {
-      // Find tracks visually above currentTrack (smaller top coordinate)
-      const tracksAbove = candidateTracks
-        .filter(t => t.getBoundingClientRect().top < currentTrackRect.top - 15)
-        .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top); // closest above first
-      targetTrack = tracksAbove[0] || null;
-    } else {
-      // Find tracks visually below currentTrack (larger top coordinate)
-      const tracksBelow = candidateTracks
-        .filter(t => t.getBoundingClientRect().top > currentTrackRect.top + 15)
-        .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top); // closest below first
-      targetTrack = tracksBelow[0] || null;
-    }
-
-    if (!targetTrack) return null;
+    const targetTrack = allTracks[targetIdx];
 
     const targetCards = Array.from(targetTrack.querySelectorAll('.media-card'));
     if (targetCards.length === 0) return null;
