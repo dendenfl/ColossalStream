@@ -1,5 +1,5 @@
 import Hls from 'hls.js';
-import { getRealStreamUrl, STREAM_SERVERS } from '../services/resolvers.js';
+import { getRealStreamUrl, STREAM_SERVERS, getServerLabel } from '../services/resolvers.js';
 import { getLanguage, t, getItemTitle, formatItemDuration, localizeGenre } from '../services/i18n.js';
 import { saveContinueWatching, getItemProgress, formatTimestamp, markEpisodeWatched, markItemWatched, removeContinueWatching, isSeriesItem } from '../services/storage.js';
 
@@ -2027,12 +2027,15 @@ export class VideoPlayer {
     if (!this.currentItem) return;
     this.fallbackAttempts = (this.fallbackAttempts || 0) + 1;
 
+    // Auto-fallback walks STREAM_SERVERS forward: Server 1 -> 2 -> 3 -> 4 -> 5.
+    // The watchdog only calls this while fallbackAttempts < STREAM_SERVERS.length - 1,
+    // so it never wraps around to a server that already failed.
     const serverOrder = STREAM_SERVERS.map(s => s.id);
     const currentIdx = serverOrder.indexOf(this.currentServerId);
     const nextServer = currentIdx >= 0 ? serverOrder[(currentIdx + 1) % serverOrder.length] : serverOrder[0];
 
     const isEn = (typeof window.getLanguage === 'function' ? window.getLanguage() : getLanguage()) === 'en';
-    const serverName = (STREAM_SERVERS.find(s => s.id === nextServer) || {}).name || nextServer;
+    const serverName = getServerLabel(nextServer);
     const template = t('tryBackupServer') || (isEn ? 'Trying backup server: {0}...' : 'Alternando para servidor reserva: {0}...');
     const msg = template.replace('{0}', serverName);
     this.showToast('⚡', msg);
@@ -2283,18 +2286,12 @@ export class VideoPlayer {
       autoembed: '🚀'
     };
 
-    const serverLabels = {
-      multiembed: t('serverMultiEmbed') || (isEn ? 'Server 1 (AnyEmbed VIP - Zero Ads)' : 'Servidor 1 (AnyEmbed VIP - Sem Anúncios)'),
-      vidlink: t('serverVidLink') || (isEn ? 'Server 2 (VidLink Ultra - Fast 4K)' : 'Servidor 2 (VidLink Ultra - Rápido 4K)'),
-      '2embed': t('server2Embed') || (isEn ? 'Server 3 (2Embed Prime)' : 'Servidor 3 (2Embed Prime)'),
-      vidsrc: t('serverVidSrc') || (isEn ? 'Server 4 (VidSrc Pro)' : 'Servidor 4 (VidSrc Pro)'),
-      autoembed: t('serverAutoEmbed') || (isEn ? 'Server 5 (AutoEmbed HD - Backup)' : 'Servidor 5 (AutoEmbed HD - Reserva)')
-    };
-
+    // Labels are derived from STREAM_SERVERS order via getServerLabel():
+    // "Server 1 (AnyEmbed VIP - Zero Ads)", etc. Never hardcode numbers here.
     this.settingsOptions.innerHTML = STREAM_SERVERS.map((srv) => {
       const isCurrent = this.currentServerId === srv.id;
       const icon = serverIcons[srv.id] || '📺';
-      const label = serverLabels[srv.id] || srv.name;
+      const label = getServerLabel(srv.id);
       return `
         <button class="player-server-opt-btn w-full p-2.5 rounded-xl ${isCurrent ? 'bg-red-600/30 border-red-500/80 text-white font-bold shadow-lg shadow-red-900/30' : 'bg-white/5 hover:bg-white/15 border-white/10 text-neutral-300'} border text-left transition flex items-center justify-between cursor-pointer" data-server="${srv.id}" tabindex="0">
           <div class="flex items-center gap-2.5 min-w-0">
@@ -2321,7 +2318,7 @@ export class VideoPlayer {
         this.closeSettingsModal();
         if (serverId && serverId !== this.currentServerId) {
           this.switchServer(serverId);
-          const sName = serverLabels[serverId] || serverId.toUpperCase();
+          const sName = getServerLabel(serverId);
           this.showToast('🔄', sName);
         }
       };

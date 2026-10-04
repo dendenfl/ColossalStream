@@ -3,16 +3,52 @@
  * Real Streams & Embed Providers for Movies, Series, and Live TV
  */
 import { searchStremioCatalog, fetchStremioTopCatalog } from './stremio.js';
-import { getItemTitle, getItemDescription } from './i18n.js';
+import { getItemTitle, getItemDescription, t, getLanguage } from './i18n.js';
 
 // Multi-Engine High-Performance Streaming Servers (Fast 1080p/4K, Subtitles, Zero Ads)
+// NOTE: Array order is the source of truth for server numbering AND the
+// auto-fallback chain: playback starts at Server 1 and falls back 1 -> 2 -> 3 -> 4 -> 5.
+// Display numbers are derived from this order via getServerLabel(), never hardcoded.
 export const STREAM_SERVERS = [
-  { id: "multiembed", name: "AnyEmbed VIP (Server 1 - Zero Ads & 1080p)", type: "embed" },
-  { id: "vidlink", name: "VidLink Ultra (Server 2 - Fast 4K)", type: "embed" },
-  { id: "2embed", name: "2Embed Prime (Server 3)", type: "embed" },
-  { id: "vidsrc", name: "VidSrc Pro (Server 4)", type: "embed" },
-  { id: "autoembed", name: "AutoEmbed HD (Server 5 - Backup)", type: "embed" }
+  { id: "multiembed", name: "AnyEmbed VIP (Zero Ads & 1080p)", type: "embed" },
+  { id: "vidlink", name: "VidLink Ultra (Fast 4K)", type: "embed" },
+  { id: "2embed", name: "2Embed Prime", type: "embed" },
+  { id: "vidsrc", name: "VidSrc Pro", type: "embed" },
+  { id: "autoembed", name: "AutoEmbed HD (Backup)", type: "embed" }
 ];
+
+// Server id -> i18n description key (descriptions carry no numbers on purpose)
+const SERVER_LABEL_KEYS = {
+  multiembed: "serverMultiEmbed",
+  vidlink: "serverVidLink",
+  "2embed": "server2Embed",
+  vidsrc: "serverVidSrc",
+  autoembed: "serverAutoEmbed"
+};
+
+/**
+ * Single source of truth for server display labels, e.g. "Server 1 (AnyEmbed VIP - Zero Ads)".
+ * The number is the server's position in STREAM_SERVERS, so reordering the
+ * array automatically renumbers every label, toast, and the fallback chain.
+ */
+export function getServerLabel(serverId) {
+  const idx = STREAM_SERVERS.findIndex(s => s.id === serverId);
+  const key = SERVER_LABEL_KEYS[serverId];
+  let desc = "";
+  try {
+    if (key && typeof t === "function") desc = t(key) || "";
+  } catch (e) {}
+  if (!desc) {
+    const srv = STREAM_SERVERS.find(s => s.id === serverId);
+    desc = (srv && srv.name) || String(serverId);
+  }
+  const n = idx >= 0 ? idx + 1 : "?";
+  let isEn = true;
+  try {
+    if (typeof getLanguage === "function") isEn = getLanguage() === "en";
+  } catch (e) {}
+  return `${isEn ? "Server" : "Servidor"} ${n} (${desc})`;
+}
 
 export const BRAZILIAN_CATALOG = {
   superflix: [
