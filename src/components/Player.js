@@ -886,6 +886,7 @@ export class VideoPlayer {
     // Manual embed mode when the native hooks can't be injected (old WebView):
     // the provider's player is shown as-is and the user controls it directly.
     this.manualEmbedMode = !this._webViewInfo.videoHooks;
+    this._manualUserTookControl = false;
 
     this.currentItem = item;
     this.currentServerId = serverId;
@@ -1012,32 +1013,18 @@ export class VideoPlayer {
       this.embed.src = streamData.url;
       this.updateStreamPlaybackState(false);
 
-      // Keep HUD clean/unobtrusive initially. In manual embed mode (outdated
-      // WebView) the top bar stays visible so Server/Close remain reachable.
-      if (this.manualEmbedMode) {
-        this.showHUD(false);
-        clearTimeout(this.hudTimeout);
-        if (this.hud) this.hud.style.background = 'none';
-        if (this.centerControls) this.centerControls.classList.add('hidden');
-        if (this.bottomBar) this.bottomBar.classList.add('hidden');
-      } else {
-        this.hideHUD();
-      }
+      // Keep HUD clean/unobtrusive initially
+      this.hideHUD();
 
       const onIframeLoaded = () => {
         this.spinner.classList.add('hidden');
         if (this.manualEmbedMode) {
           // No hooks: cannot autoplay or track state. Reveal the provider's own
-          // player and let the user drive it with the remote (D-pad passes
-          // through to the WebView). No auto server-cycling: without playback
-          // reports we cannot tell a working server from a broken one.
+          // player. The user presses the app's Play button to tap the provider's
+          // play button (via native center-tap), or switches servers manually.
+          // Auto-fallback still runs (25s) unless the user takes control.
           this.hideLoadingScreen();
-          this.showHUD(false);
-          clearTimeout(this.hudTimeout);
-          if (this.hud) this.hud.style.background = 'none';
-          if (this.centerControls) this.centerControls.classList.add('hidden');
-          if (this.bottomBar) this.bottomBar.classList.add('hidden');
-          const hint = t('manualEmbedHint') || 'Use your remote: go to the play button and press OK. BACK exits.';
+          const hint = t('manualEmbedHint') || 'Press Play to start the video, or wait for the next server. BACK exits.';
           this.showToast('🎬', hint);
           return;
         }
@@ -1526,9 +1513,8 @@ export class VideoPlayer {
     this.streamWatchdog = null;
     this.hideNextEpisodeCard();
     this.unlockScreen();
-    // Reset manual-embed-mode HUD tweaks so the next open starts clean.
-    if (this.hud) this.hud.style.background = '';
     this.manualEmbedMode = false;
+    this._manualUserTookControl = false;
 
     if (this.settingsModal && !this.settingsModal.classList.contains('hidden')) this.closeSettingsModal();
     if (this.castModal && !this.castModal.classList.contains('hidden')) this.closeCastMenu();
@@ -1629,6 +1615,21 @@ export class VideoPlayer {
 
   togglePlay() {
     if (this.isEmbedMode) {
+      // Manual embed mode (outdated WebView, no hooks): the app cannot control
+      // the provider's player directly. Simulate a tap at the center of the
+      // screen, where the provider's play button usually is. Mark user control
+      // so the watchdog doesn't auto-switch servers and interrupt them.
+      if (this.manualEmbedMode) {
+        this._manualUserTookControl = true;
+        try {
+          if (window.AndroidNative && window.AndroidNative.simulateClickAt) {
+            window.AndroidNative.simulateClickAt(0.5, 0.5);
+          }
+        } catch (e) {}
+        this.showCenterIndicator("▶");
+        this.showToast('👆', t('manualTapping') || 'Tapping play button...');
+        return;
+      }
       // If stream has not yet started, ALWAYS treat interaction as PLAY/START
       const nextState = !this.hasStreamPlaybackStarted ? true : !this.isEmbedPlaying;
       this.isEmbedPlaying = nextState;
@@ -2007,22 +2008,28 @@ export class VideoPlayer {
 
     // Both embed and direct-video modes get a startup watchdog now.
     // Embeds depend on the native video hooks; direct streams on the <video> element.
-    const timeoutMs = this.isEmbedMode ? 9000 : 12000;
+    const timeoutMs = (this.manualEmbedMode && this.isEmbedMode) ? 25000 : (this.isEmbedMode ? 9000 : 12000);
 
     this.streamWatchdog = setTimeout(() => {
       // Manual embed mode (outdated WebView, no hooks): we cannot detect
-      // playback, so never auto-cycle servers. Just reveal the provider player
-      // and leave the choice to the user.
+      // playback. Give the user 25s to press Play (which taps the provider's
+      // play button). If they don't take control, fall back to the next server
+      // so the app keeps trying different sources automatically.
       if (this.manualEmbedMode && this.isEmbedMode) {
+        if (this._manualUserTookControl) {
+          // User pressed Play; they're driving. Don't interrupt.
+          return;
+        }
         this.spinner.classList.add('hidden');
         this.hideLoadingScreen();
-        this.showHUD(false);
-        clearTimeout(this.hudTimeout);
-        if (this.hud) this.hud.style.background = 'none';
-        if (this.centerControls) this.centerControls.classList.add('hidden');
-        if (this.bottomBar) this.bottomBar.classList.add('hidden');
-        const hint = t('manualEmbedHint') || 'Use your remote: go to the play button and press OK. BACK exits.';
-        this.showToast('🎬', hint);
+        if (this.isEmbedMode && (this.fallbackAttempts || 0) < (STREAM_SERVERS.length - 1)) {
+          this.triggerStreamAutoFallback();
+        } else {
+          const isEn2 = (typeof window.getLanguage === 'function' ? window.getLanguage() : getLanguage()) === 'en';
+          const msg2 = t('pressServerOrPlay') || (isEn2 ? 'Press Server to change source or Play to retry' : 'Pressione Servidor ou aperte Play para tentar');
+          this.showToast('⚠️', msg2);
+          this.showHUD(true);
+        }
         return;
       }
       // In direct mode, a loaded-but-paused video (e.g. waiting for the user to

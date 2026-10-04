@@ -1287,15 +1287,6 @@ export class TvNavigation {
     const player = window.cinePlayerInstance;
     if (!player) return false;
 
-    // Manual embed mode (system WebView too old for the native video hooks):
-    // do NOT intercept D-pad/media keys. The WebView natively moves focus into
-    // the provider's own player so the user can press OK on its play button.
-    // Back is handled earlier by the app back-button handler; sub-modals
-    // (e.g. the server picker) are handled by handleModalKeys before we get here.
-    if (player.manualEmbedMode && player.isEmbedMode) {
-      return false;
-    }
-
     const key = e.key;
 
     // Dedicated Media Keys
