@@ -1361,9 +1361,13 @@ public class MainActivity extends BridgeActivity {
         public void openYouTube(String videoId) {
             runOnUiThread(() -> {
                 if (videoId == null || videoId.trim().isEmpty()) return;
+                String id = videoId.trim();
+                // Security: validate YouTube video ID format (11 chars, alphanumeric + - _).
+                // Prevents injection of malicious URLs through the JS bridge.
+                if (!id.matches("[a-zA-Z0-9_-]{11}")) return;
                 try {
                     // Try native YouTube app directly
-                    android.content.Intent appIntent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + videoId.trim()));
+                    android.content.Intent appIntent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + id));
                     appIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(appIntent);
                 } catch (Exception e) {
@@ -1381,8 +1385,14 @@ public class MainActivity extends BridgeActivity {
         public void openExternalUrl(String url) {
             runOnUiThread(() -> {
                 if (url == null || url.trim().isEmpty()) return;
+                String cleanUrl = url.trim();
+                String lower = cleanUrl.toLowerCase();
+                // Security: only allow http/https. Blocks tel:, sms:, intent:,
+                // file:, javascript: and other schemes that a malicious iframe
+                // could abuse through the JS bridge.
+                if (!lower.startsWith("http://") && !lower.startsWith("https://")) return;
                 try {
-                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url.trim()));
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
                     intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                 } catch (Exception ignored) {}
