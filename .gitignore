@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build and distribution directories
+dist/
+build/
+bin/
+gen/
+out/
+
+# Android build outputs & local configs
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.cxx/
+android/.externalNativeBuild/
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# Binaries & APKs
+*.apk
+*.aab
+*.aar
+*.dex
+*.class
+
+# Root-level test screenshots & image dumps
+/*.png
+/*.jpg
+/*.jpeg
+
+# Root-level debug HTML dumps (preserve index.html)
+/*_dump.html
+/*_test.html
+/autoembed*.html
+/vidlink*.html
+/multiembed*.html
+/vidsrc*.html
+/vsembed*.html
+/player_source.html
+/inner_player.html
+/download.html
+/nextgen_dump.html
+
+# Test scripts & scratch files
+/scratch/
+/scratch_*.cjs
+/scratch_*.js
+/test_*.cjs
+/test_*.mjs
+/test_*.js
+/*.txt
+/*.patch
+/*.ps1
+/*.log
+
+# IDE & OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+*.swp
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.keystore
+*.jks
+*.bak
+/player.js
+/subtitles.js

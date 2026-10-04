@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <title>ColossalStream • Movies & Series</title>
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <link rel="preconnect" href="https://player.autoembed.co" crossorigin>
+  <link rel="preconnect" href="https://nextgencloudfabric.com" crossorigin>
+  <link rel="preconnect" href="https://vidlink.pro" crossorigin>
+  <link rel="preconnect" href="https://www.2embed.cc" crossorigin>
+  <link rel="preconnect" href="https://vidsrc.sh" crossorigin>
+  <link rel="dns-prefetch" href="https://player.autoembed.co">
+  <link rel="dns-prefetch" href="https://nextgencloudfabric.com">
+  <link rel="dns-prefetch" href="https://vidlink.pro">
+  <link rel="dns-prefetch" href="https://www.2embed.cc">
+  <link rel="dns-prefetch" href="https://vidsrc.sh">
+  <script>
+    // Native Ad-Shield: Block popup window hijackers and ad tabs
+    window.open = function() {
+      console.log('[AdShield] Blocked popup window');
+      return null;
+    };
+  </script>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col overflow-x-hidden select-none">
+
+  <!-- Unified Sticky Top Bar (Logo + 5 Tabs + Search + Profile/Settings) -->
+  <!-- Unified Sticky Top Bar (Logo + 4 Tabs + Search + Profile + Settings) -->
+  <header class="app-top-header sticky top-0 z-40 bg-[#08080a]/95 backdrop-blur-md border-b border-white/10 shadow-xl flex items-center justify-between gap-1.5 sm:gap-3 px-2 sm:px-6 py-1.5 flex-nowrap">
+    <!-- Left: ColossalStream Brand Logo -->
+    <div class="flex items-center gap-2 flex-shrink-0 cursor-pointer group" onclick="if (window.cineApp) window.cineApp.switchTab('home');">
+      <img src="/assets/cs_emblem.png" alt="ColossalStream" class="h-8 sm:h-9 w-auto object-contain drop-shadow-[0_0_12px_rgba(229,9,20,0.5)] group-hover:scale-105 transition-transform" />
+      <div class="hidden sm:flex items-baseline tracking-tight font-sans select-none">
+        <span class="text-sm sm:text-base font-bold text-neutral-300 group-hover:text-white transition-colors">Colossal</span>
+        <span class="text-sm sm:text-base font-black text-[#e50914] ml-0.5">Stream</span>
+      </div>
+    </div>
+
+    <!-- Center: 4 Sticky Navigation Tabs (Movies, Series, Discover, My List) -->
+    <nav id="app-nav-tabs" class="flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0 overflow-x-auto no-scrollbar py-0.5">
+      <button 
+        id="tab-btn-movies" 
+        class="tab-btn px-2.5 sm:px-3.5 py-1 rounded-full font-black text-xs md:text-sm transition flex items-center gap-1 bg-[#e50914] text-white shadow-lg shadow-red-950/60 active:scale-95 cursor-pointer whitespace-nowrap"
+      >
+        <span class="text-xs">🎬</span>
+        <span id="tab-movies-label">Movies</span>
+      </button>
+      <button 
+        id="tab-btn-series" 
+        class="tab-btn px-2.5 sm:px-3.5 py-1 rounded-full font-black text-xs md:text-sm transition flex items-center gap-1 bg-white/10 hover:bg-white/15 text-neutral-400 hover:text-white border border-white/10 active:scale-95 cursor-pointer whitespace-nowrap"
+      >
+        <span class="text-xs">📺</span>
+        <span id="tab-series-label">Series</span>
+      </button>
+      <button 
+        id="tab-btn-discovery" 
+        class="tab-btn px-2.5 sm:px-3.5 py-1 rounded-full font-black text-xs md:text-sm transition flex items-center gap-1 bg-white/10 hover:bg-white/15 text-neutral-400 hover:text-white border border-white/10 active:scale-95 cursor-pointer whitespace-nowrap"
+      >
+        <span class="text-xs">🧭</span>
+        <span id="tab-discovery-label">Discover</span>
+      </button>
+      <button 
+        id="tab-btn-mylist" 
+        class="tab-btn px-2.5 sm:px-3.5 py-1 rounded-full font-black text-xs md:text-sm transition flex items-center gap-1 bg-white/10 hover:bg-white/15 text-neutral-400 hover:text-white border border-white/10 active:scale-95 cursor-pointer whitespace-nowrap"
+      >
+        <span class="text-xs">🔖</span>
+        <span id="tab-mylist-label">My List</span>
+      </button>
+    </nav>
+
+    <!-- Right: Unified Action Buttons (Search, Profile Avatar, Settings) -->
+    <div id="header-actions" class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+      <!-- Search Trigger Button -->
+      <button 
+        id="btn-open-search" 
+        class="h-8 sm:h-9 px-2 sm:px-3 rounded-xl bg-white/10 hover:bg-white/20 text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-bold transition flex-shrink-0 active:scale-95 border border-white/10 cursor-pointer shadow"
+        title="Search / Pesquisar"
+        aria-label="Search"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <span id="header-search-label" class="hidden md:inline text-xs">Search</span>
+      </button>
+
+      <!-- Profile Avatar Button -->
+      <button 
+        id="btn-open-profile" 
+        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 text-xs font-bold transition flex-shrink-0 active:scale-95 border border-white/10 cursor-pointer shadow"
+        title="Perfis / Quem está assistindo?"
+        aria-label="Profiles"
+      >
+        <span id="header-profile-avatar" class="text-sm sm:text-base leading-none">🦁</span>
+        <span id="header-profile-name" class="hidden md:inline-block max-w-[70px] truncate text-[11px] font-bold">Principal</span>
+      </button>
+
+      <!-- Settings Button -->
+      <button 
+        id="btn-open-settings" 
+        class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm sm:text-base transition flex-shrink-0 active:scale-95 border border-white/10 cursor-pointer"
+        title="Settings / Configurações"
+        aria-label="Settings"
+      >
+        ⚙️
+      </button>
+    </div>
+  </header>
+
+  <!-- Search Modal Overlay Root Mount -->
+  <div id="search-root"></div>
+
+  <!-- Main Scrollable Dashboard -->
+  <main id="dashboard-main" class="flex-1 overflow-y-auto overflow-x-hidden px-2 md:px-5 py-1 space-y-2 md:space-y-3 pb-8">
+    
+    <!-- Hero Spotlight Carousel Mount (Cinematic full-width) -->
+    <div id="hero-banner-root" class="w-full"></div>
+
+    <!-- PAGE 1: MOVIES PAGE (Default Active Tab) -->
+    <div id="page-movies" class="space-y-2 md:space-y-3">
+      <!-- 1. Continue Watching: Movies -->
+      <div id="row-continue-movies" class="media-row-container"></div>
+
+      <!-- 2. Trending & Popular Movies -->
+      <div id="row-movies-trending" class="media-row-container"></div>
+
+      <!-- 3. Recently Added Movies -->
+      <div id="row-movies-recent" class="media-row-container"></div>
+
+      <!-- 4. Action & Blockbusters -->
+      <div id="row-movies-action" class="media-row-container"></div>
+
+      <!-- 5. Top Rated Classics -->
+      <div id="row-movies-toprated" class="media-row-container"></div>
+
+      <!-- 6. Comedy & Entertainment -->
+      <div id="row-movies-comedy" class="media-row-container"></div>
+
+      <!-- 7. Kids & Family (Animation) -->
+      <div id="row-movies-family" class="media-row-container"></div>
+
+      <!-- 8. Sci-Fi & Thrillers -->
+      <div id="row-movies-scifi" class="media-row-container"></div>
+    </div>
+
+    <!-- PAGE 2: SERIES PAGE (Hidden until tab clicked) -->
+    <div id="page-series" class="space-y-2 md:space-y-3 hidden">
+      <!-- 1. Continue Watching: Series -->
+      <div id="row-continue-series" class="media-row-container"></div>
+
+      <!-- 2. Trending & Popular Series -->
+      <div id="row-series-trending" class="media-row-container"></div>
+
+      <!-- 3. Recently Added Series -->
+      <div id="row-series-recent" class="media-row-container"></div>
+
+      <!-- 4. Crime & Gripping Dramas -->
+      <div id="row-series-crime" class="media-row-container"></div>
+
+      <!-- 5. Top Rated & Award Winning Series -->
+      <div id="row-series-toprated" class="media-row-container"></div>
+
+      <!-- 6. Sci-Fi & Fantasy Series -->
+      <div id="row-series-scifi" class="media-row-container"></div>
+
+      <!-- 7. Action & Adventure Series -->
+      <div id="row-series-action" class="media-row-container"></div>
+
+      <!-- 8. Kids & Family Animation -->
+      <div id="row-series-family" class="media-row-container"></div>
+    </div>
+
+    <!-- PAGE 3: DISCOVERY HUB PAGE (Hidden until tab clicked) -->
+    <div id="page-discovery" class="space-y-4 hidden"></div>
+
+    <!-- PAGE 4: MY LIST DEDICATED PAGE (Hidden until tab clicked) -->
+    <div id="page-mylist" class="space-y-4 hidden"></div>
+
+  </main>
+
+  <!-- Auth / Cloud Sync Modal Mount -->
+  <div id="auth-root"></div>
+
+  <!-- Profile Modal Mount -->
+  <div id="profile-root"></div>
+
+  <!-- Settings Modal Mount -->
+  <div id="settings-root"></div>
+
+  <!-- All Movies/Series Catalog Grid Sheet Mount -->
+  <div id="catalog-root"></div>
+
+  <!-- Details Modal Sheet Mount -->
+  <div id="details-root"></div>
+
+  <!-- Fullscreen Player with Time Bar Mount -->
+  <div id="player-root"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

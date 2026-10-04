@@ -1,0 +1,12 @@
+{
+  "appId": "com.cinetv.app",
+  "appName": "CineTv",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
