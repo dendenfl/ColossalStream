@@ -18,6 +18,10 @@ export class VideoPlayer {
     this.currentEpisode = 1;
     this.isEmbedMode = false;
     this.isEmbedPlaying = true;
+    // Manual embed mode: true when the system WebView is too old for the native
+    // video hooks (Chrome < 111). The provider's own player is shown and the
+    // user drives it directly with the remote (D-pad passes through).
+    this.manualEmbedMode = false;
     this.aspectRatioMode = parseInt(localStorage.getItem('cinetv_aspect_ratio') || '0', 10);
     this.lastPlayTime = 0;
     this.lastPlaybackTime = 0;
@@ -879,6 +883,9 @@ export class VideoPlayer {
     // Probe the real WebView engine capabilities. The UA string is overridden
     // with a fixed Chrome/128 value, so JS cannot detect an outdated WebView alone.
     this.refreshWebViewInfo();
+    // Manual embed mode when the native hooks can't be injected (old WebView):
+    // the provider's player is shown as-is and the user controls it directly.
+    this.manualEmbedMode = !this._webViewInfo.videoHooks;
 
     this.currentItem = item;
     this.currentServerId = serverId;
@@ -1005,11 +1012,35 @@ export class VideoPlayer {
       this.embed.src = streamData.url;
       this.updateStreamPlaybackState(false);
 
-      // Keep HUD clean/unobtrusive initially
-      this.hideHUD();
+      // Keep HUD clean/unobtrusive initially. In manual embed mode (outdated
+      // WebView) the top bar stays visible so Server/Close remain reachable.
+      if (this.manualEmbedMode) {
+        this.showHUD(false);
+        clearTimeout(this.hudTimeout);
+        if (this.hud) this.hud.style.background = 'none';
+        if (this.centerControls) this.centerControls.classList.add('hidden');
+        if (this.bottomBar) this.bottomBar.classList.add('hidden');
+      } else {
+        this.hideHUD();
+      }
 
       const onIframeLoaded = () => {
         this.spinner.classList.add('hidden');
+        if (this.manualEmbedMode) {
+          // No hooks: cannot autoplay or track state. Reveal the provider's own
+          // player and let the user drive it with the remote (D-pad passes
+          // through to the WebView). No auto server-cycling: without playback
+          // reports we cannot tell a working server from a broken one.
+          this.hideLoadingScreen();
+          this.showHUD(false);
+          clearTimeout(this.hudTimeout);
+          if (this.hud) this.hud.style.background = 'none';
+          if (this.centerControls) this.centerControls.classList.add('hidden');
+          if (this.bottomBar) this.bottomBar.classList.add('hidden');
+          const hint = t('manualEmbedHint') || 'Use your remote: go to the play button and press OK. BACK exits.';
+          this.showToast('🎬', hint);
+          return;
+        }
         this.sendPlayerAction('play');
         this.sendPlayerAction('unmute');
 
@@ -1495,6 +1526,9 @@ export class VideoPlayer {
     this.streamWatchdog = null;
     this.hideNextEpisodeCard();
     this.unlockScreen();
+    // Reset manual-embed-mode HUD tweaks so the next open starts clean.
+    if (this.hud) this.hud.style.background = '';
+    this.manualEmbedMode = false;
 
     if (this.settingsModal && !this.settingsModal.classList.contains('hidden')) this.closeSettingsModal();
     if (this.castModal && !this.castModal.classList.contains('hidden')) this.closeCastMenu();
@@ -1976,6 +2010,21 @@ export class VideoPlayer {
     const timeoutMs = this.isEmbedMode ? 9000 : 12000;
 
     this.streamWatchdog = setTimeout(() => {
+      // Manual embed mode (outdated WebView, no hooks): we cannot detect
+      // playback, so never auto-cycle servers. Just reveal the provider player
+      // and leave the choice to the user.
+      if (this.manualEmbedMode && this.isEmbedMode) {
+        this.spinner.classList.add('hidden');
+        this.hideLoadingScreen();
+        this.showHUD(false);
+        clearTimeout(this.hudTimeout);
+        if (this.hud) this.hud.style.background = 'none';
+        if (this.centerControls) this.centerControls.classList.add('hidden');
+        if (this.bottomBar) this.bottomBar.classList.add('hidden');
+        const hint = t('manualEmbedHint') || 'Use your remote: go to the play button and press OK. BACK exits.';
+        this.showToast('🎬', hint);
+        return;
+      }
       // In direct mode, a loaded-but-paused video (e.g. waiting for the user to
       // press play, or the resume modal) is not a failure.
       const directReady = !this.isEmbedMode && this.video && this.video.readyState >= 2;
