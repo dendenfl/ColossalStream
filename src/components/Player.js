@@ -2036,11 +2036,12 @@ export class VideoPlayer {
 
       // If the embed is alive (the native hook keeps reporting video state) but
       // the content hasn't started yet (slow load, preroll), give THIS server
-      // more time instead of abandoning it. Only fall back when the embed
-      // looks dead (no reports at all).
+      // one more chance instead of abandoning it. Only fall back when the embed
+      // looks dead (no reports at all). A single re-arm keeps the worst case
+      // at 18s per server instead of 27s.
       const lastReportAge = this._lastEmbedReportAt ? (Date.now() - this._lastEmbedReportAt) : Infinity;
       const embedAlive = this.isEmbedMode && lastReportAge < 5000;
-      if (embedAlive && (this._watchdogRearms || 0) < 2) {
+      if (embedAlive && (this._watchdogRearms || 0) < 1) {
         this._watchdogRearms = (this._watchdogRearms || 0) + 1;
         console.log('[Player] Embed is alive but content has not started yet. Extending wait instead of switching server...');
         this.startStreamWatchdog();
