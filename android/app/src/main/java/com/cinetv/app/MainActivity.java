@@ -1512,6 +1512,33 @@ public class MainActivity extends BridgeActivity {
             return MainActivity.this.isTvDevice();
         }
 
+        // Reports the REAL WebView engine capabilities to the web layer.
+        // NOTE: navigator.userAgent is overridden with a fixed Chrome/128 string,
+        // so the web layer cannot detect an outdated WebView by itself.
+        @JavascriptInterface
+        public String getWebViewInfo() {
+            try {
+                org.json.JSONObject info = new org.json.JSONObject();
+                String versionName = "";
+                try {
+                    android.content.pm.PackageInfo pi =
+                        androidx.webkit.WebViewCompat.getCurrentWebViewPackage(MainActivity.this);
+                    if (pi != null) versionName = pi.versionName != null ? pi.versionName : "";
+                } catch (Exception ignored) {}
+                info.put("webViewVersion", versionName);
+                info.put("documentStartScript",
+                    androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT));
+                info.put("webMessageListener",
+                    androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER));
+                // The embed video hooks (autoplay, ad cleanup, playback-state reporting)
+                // are only injected when DOCUMENT_START_SCRIPT is supported.
+                info.put("videoHooks", androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT));
+                return info.toString();
+            } catch (Exception e) {
+                return "{}";
+            }
+        }
+
         @JavascriptInterface
         public void showKeyboard() {
             runOnUiThread(() -> {

@@ -14,7 +14,7 @@ A modern, high-performance streaming application designed for Android TV boxes, 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Vite 6, Vanilla JS (ES Modules), Tailwind CSS
-- **Mobile/TV Shell**: Capacitor 6 with custom `MainActivity.java`
+- **Mobile/TV Shell**: Capacitor 8 with custom `MainActivity.java`
 - **Streaming Engine**: HLS.js, Custom Embed Stream Controller & Watchdog
 - **Data & Metadata**: Cinemeta / Stremio API, TMDB, Supabase
 

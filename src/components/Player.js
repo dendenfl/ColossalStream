@@ -863,6 +863,17 @@ export class VideoPlayer {
     }
     this.lastPlayTime = now;
 
+    // Fresh user-initiated play: reset the server fallback budget.
+    // (Auto-fallback replays set _autoFallbackReplay so the budget survives across servers.)
+    if (!this._autoFallbackReplay) {
+      this.fallbackAttempts = 0;
+    }
+    this._autoFallbackReplay = false;
+
+    // Probe the real WebView engine capabilities. The UA string is overridden
+    // with a fixed Chrome/128 value, so JS cannot detect an outdated WebView alone.
+    this.refreshWebViewInfo();
+
     this.currentItem = item;
     this.currentServerId = serverId;
     this.currentSeason = season;
@@ -1069,6 +1080,13 @@ export class VideoPlayer {
           this.video.play().catch(() => {});
           this.resetHUDTimeout();
         });
+      } else {
+        // No MSE (hls.js) and no native HLS support: fail loudly instead of
+        // leaving the loading spinner spinning forever (common on old TV boxes).
+        this.spinner.classList.add('hidden');
+        this.hideLoadingScreen();
+        this.showToast('⚠️', t('videoFormatUnsupported') || 'This video format is not supported on this device.');
+        this.showHUD(true);
       }
     }
   }
@@ -1168,6 +1186,13 @@ export class VideoPlayer {
           this.updateStreamPlaybackState(true);
           this.resetHUDTimeout();
         });
+      } else {
+        // No MSE (hls.js) and no native HLS support: fail loudly instead of
+        // leaving the loading spinner spinning forever (common on old TV boxes).
+        this.spinner.classList.add('hidden');
+        this.hideLoadingScreen();
+        this.showToast('⚠️', t('videoFormatUnsupported') || 'This video format is not supported on this device.');
+        this.showHUD(true);
       }
     }
   }
@@ -1394,6 +1419,20 @@ export class VideoPlayer {
             this.spinner.classList.add('hidden');
             this.video.play().catch(() => {});
           });
+        } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
+          this.video.src = streamUrl;
+          this.video.onloadedmetadata = () => {
+            this.spinner.classList.add('hidden');
+            this.video.play().catch(() => {});
+          };
+          this.video.load();
+        } else {
+          // No MSE (hls.js) and no native HLS support: fail loudly instead of
+          // leaving the loading spinner spinning forever (common on old TV boxes).
+          this.spinner.classList.add('hidden');
+          this.hideLoadingScreen();
+          this.showToast('⚠️', t('videoFormatUnsupported') || 'This video format is not supported on this device.');
+          this.showHUD(true);
         }
       }
     }
@@ -1879,28 +1918,74 @@ export class VideoPlayer {
     return false;
   }
 
+  // Checks the real WebView engine capabilities exposed by the native bridge.
+  // On TV boxes with an outdated Android System WebView, the native video hooks
+  // (document-start injection: autoplay, ad cleanup, playback-state reporting)
+  // are silently unavailable, which used to cause infinite loading spinners.
+  refreshWebViewInfo() {
+    if (this._webViewInfoProbed) return this._webViewInfo;
+    this._webViewInfoProbed = true;
+    this._webViewInfo = { videoHooks: true, webViewVersion: '' };
+    try {
+      if (window.AndroidNative && window.AndroidNative.getWebViewInfo) {
+        const raw = window.AndroidNative.getWebViewInfo();
+        const info = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (info && typeof info === 'object') {
+          this._webViewInfo = {
+            videoHooks: info.videoHooks !== false,
+            webViewVersion: info.webViewVersion || ''
+          };
+        }
+      }
+    } catch (e) {}
+    if (!this._webViewInfo.videoHooks && !this._webViewOutdatedWarned) {
+      this._webViewOutdatedWarned = true;
+      console.warn('[Player] Native video hooks unavailable. WebView version:', this._webViewInfo.webViewVersion || 'unknown');
+      const msg = t('webViewOutdated') || 'Video may not start: your Android System WebView is outdated. Please update it in the Play Store.';
+      // Defer slightly so the player UI is visible before the toast appears.
+      setTimeout(() => this.showToast('⚠️', msg), 1200);
+    }
+    return this._webViewInfo;
+  }
+
   startStreamWatchdog() {
     clearTimeout(this.streamWatchdog);
     this.streamWatchdog = null;
-    if (!this.isEmbedMode) return;
 
-    // Fast, intelligent 9-second auto-fallback to guarantee playback starts on TV
-    const timeoutMs = 9000;
+    // Both embed and direct-video modes get a startup watchdog now.
+    // Embeds depend on the native video hooks; direct streams on the <video> element.
+    const timeoutMs = this.isEmbedMode ? 9000 : 12000;
 
     this.streamWatchdog = setTimeout(() => {
-      if (this.isOpen() && this.isEmbedMode && (!this.hasStreamPlaybackStarted || (this.lastPlaybackTime || 0) <= 0)) {
-        clearTimeout(this.streamWatchdog);
-        this.streamWatchdog = null;
-        if ((this.fallbackAttempts || 0) < (STREAM_SERVERS.length - 1)) {
-          console.log('[Player] Stream timed out after 9s without playback. Auto-switching to backup server...');
-          this.triggerStreamAutoFallback();
+      // In direct mode, a loaded-but-paused video (e.g. waiting for the user to
+      // press play, or the resume modal) is not a failure.
+      const directReady = !this.isEmbedMode && this.video && this.video.readyState >= 2;
+      if (!this.isOpen() || this.hasStreamPlaybackStarted || (this.lastPlaybackTime || 0) > 0 || directReady) return;
+      clearTimeout(this.streamWatchdog);
+      this.streamWatchdog = null;
+
+      const isEn = (typeof window.getLanguage === 'function' ? window.getLanguage() : getLanguage()) === 'en';
+      if (this.isEmbedMode && (this.fallbackAttempts || 0) < (STREAM_SERVERS.length - 1)) {
+        console.log('[Player] Stream timed out after 9s without playback. Auto-switching to backup server...');
+        this.triggerStreamAutoFallback();
+      } else {
+        // Out of servers (or direct-video mode, where switching servers cannot
+        // help): stop every spinner and tell the user what to do.
+        if (this.spinner) this.spinner.classList.add('hidden');
+        this.hideLoadingScreen();
+        let msg;
+        const hooks = this._webViewInfo || {};
+        if (hooks.videoHooks === false) {
+          msg = t('webViewOutdated') || (isEn
+            ? 'Video may not start: your Android System WebView is outdated. Please update it in the Play Store.'
+            : 'O vídeo pode não iniciar: seu Android System WebView está desatualizado. Atualize-o na Play Store.');
+        } else if (this.isEmbedMode) {
+          msg = t('pressServerOrPlay') || (isEn ? 'Press Server to change source or Play to retry' : 'Pressione Servidor ou aperte Play para tentar');
         } else {
-          if (this.spinner) this.spinner.classList.add('hidden');
-          const isEn = (typeof window.getLanguage === 'function' ? window.getLanguage() : getLanguage()) === 'en';
-          const msg = t('pressServerOrPlay') || (isEn ? 'Press Server to change source or Play to retry' : 'Pressione Servidor ou aperte Play para tentar');
-          this.showToast('⚠️', msg);
-          this.showHUD(true);
+          msg = t('streamStartTimeout') || (isEn ? 'The stream did not start. Check your connection or try another server.' : 'O stream não iniciou. Verifique sua conexão ou tente outro servidor.');
         }
+        this.showToast('⚠️', msg);
+        this.showHUD(true);
       }
     }, timeoutMs);
   }
@@ -1918,6 +2003,8 @@ export class VideoPlayer {
     const template = t('tryBackupServer') || (isEn ? 'Trying backup server: {0}...' : 'Alternando para servidor reserva: {0}...');
     const msg = template.replace('{0}', serverName);
     this.showToast('⚡', msg);
+    // Mark as an auto-replay so play() does not reset the fallback budget.
+    this._autoFallbackReplay = true;
     this.switchServer(nextServer, false);
   }
 
