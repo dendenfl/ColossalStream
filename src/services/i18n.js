@@ -313,11 +313,11 @@ export const TRANSLATIONS = {
     syncOffsetLabel: "Sync Offset",
     playNow: "Play Now",
     dismiss: "Dismiss",
-    serverAutoEmbed: "Server 1 (AutoEmbed HD - Instant)",
+    serverMultiEmbed: "Server 1 (AnyEmbed VIP - Zero Ads)",
     serverVidLink: "Server 2 (VidLink Ultra - Fast 4K)",
     server2Embed: "Server 3 (2Embed Prime)",
     serverVidSrc: "Server 4 (VidSrc Pro)",
-    serverMultiEmbed: "Server 5 (MultiEmbed VIP)"
+    serverAutoEmbed: "Server 5 (AutoEmbed HD - Backup)",
   },
   pt: {
     appTitle: "ColossalStream",
@@ -628,11 +628,11 @@ export const TRANSLATIONS = {
     syncOffsetLabel: "Sincronia / Atraso",
     playNow: "Assistir Agora",
     dismiss: "Cancelar",
-    serverAutoEmbed: "Servidor 1 (AutoEmbed HD - Instantâneo)",
+    serverMultiEmbed: "Servidor 1 (AnyEmbed VIP - Sem Anúncios)",
     serverVidLink: "Servidor 2 (VidLink Ultra - Rápido 4K)",
     server2Embed: "Servidor 3 (2Embed Prime)",
     serverVidSrc: "Servidor 4 (VidSrc Pro)",
-    serverMultiEmbed: "Servidor 5 (MultiEmbed VIP)"
+    serverAutoEmbed: "Servidor 5 (AutoEmbed HD - Reserva)",
   }
 };
 

@@ -175,6 +175,13 @@ public class MainActivity extends BridgeActivity {
         "      }\n" +
         "    } catch (e) {}\n" +
         "  }\n" +
+        "  function isAdSrc(src) {\n" +
+        "    if (!src) return false;\n" +
+        "    var s = String(src).toLowerCase();\n" +
+        "    return s.indexOf('vast') !== -1 || s.indexOf('vpaid') !== -1 || s.indexOf('preroll') !== -1 ||\n" +
+        "           s.indexOf('adtag') !== -1 || s.indexOf('ad_break') !== -1 || s.indexOf('/ads/') !== -1 ||\n" +
+        "           s.indexOf('doubleclick') !== -1 || s.indexOf('googlesyndication') !== -1 || s.indexOf('imasdk') !== -1;\n" +
+        "  }\n" +
         "  function reportState(force) {\n" +
         "    var v = activeVideo || document.querySelector('video');\n" +
         "    if (!v) return;\n" +
@@ -188,7 +195,8 @@ public class MainActivity extends BridgeActivity {
         "      playbackRate: v.playbackRate || 1,\n" +
         "      volume: v.volume,\n" +
         "      muted: v.muted,\n" +
-        "      src: v.currentSrc || v.src || ''\n" +
+        "      src: v.currentSrc || v.src || '',\n" +
+        "      isAd: isAdSrc(v.currentSrc || v.src || '')\n" +
         "    });\n" +
         "  }\n" +
         "  function triggerAutoPlay(v) {\n" +

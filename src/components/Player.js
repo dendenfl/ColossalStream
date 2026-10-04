@@ -83,13 +83,17 @@ export class VideoPlayer {
       }
     }, 600);
 
-    // Safety fallback: Ensure loading screen fades out after 3.5s so user sees embed player and never gets trapped
+    // Safety fallback: the loading screen can never trap the user forever.
+    // It hides as soon as real playback starts (updateStreamPlaybackState) or
+    // when the watchdog gives up; this cap is pure insurance. It is deliberately
+    // NOT hidden after a few seconds anymore: revealing the raw embed early
+    // exposed its ads/branding before autoplay kicked in.
     clearTimeout(this.loadingScreenSafetyTimer);
     this.loadingScreenSafetyTimer = setTimeout(() => {
-      if (this.isOpen() && this.isEmbedMode) {
+      if (this.isOpen()) {
         this.hideLoadingScreen();
       }
-    }, 3500);
+    }, 20000);
   }
 
   hideLoadingScreen() {
@@ -867,6 +871,8 @@ export class VideoPlayer {
     // (Auto-fallback replays set _autoFallbackReplay so the budget survives across servers.)
     if (!this._autoFallbackReplay) {
       this.fallbackAttempts = 0;
+      this._watchdogRearms = 0;
+      this._lastEmbedReportAt = 0;
     }
     this._autoFallbackReplay = false;
 
@@ -1102,9 +1108,19 @@ export class VideoPlayer {
       }
     }
 
+    // The native hook reports every video element inside the embed iframe,
+    // including preroll ads. An ad must not count as "playback started":
+    // the loading screen stays up over the ad and the watchdog stays honest.
+    const isAd = payload.isAd === true;
+    if (this.isEmbedMode) {
+      this._lastEmbedReportAt = Date.now();
+    }
+
     if (typeof payload.currentTime === 'number' && !this.isDraggingTime) {
-      this.lastPlaybackTime = payload.currentTime;
-      if (payload.currentTime > 0) {
+      if (!isAd) {
+        this.lastPlaybackTime = payload.currentTime;
+      }
+      if (payload.currentTime > 0 && !isAd) {
         this.updateStreamPlaybackState(true);
       }
     }
@@ -1115,7 +1131,7 @@ export class VideoPlayer {
       const isPlaying = !payload.paused;
       this.isEmbedPlaying = isPlaying;
       this.updatePlayPauseUI(isPlaying);
-      if (isPlaying && (payload.currentTime > 0 || (this.lastPlaybackTime && this.lastPlaybackTime > 0))) {
+      if (!isAd && isPlaying && (payload.currentTime > 0 || (this.lastPlaybackTime && this.lastPlaybackTime > 0))) {
         this.updateStreamPlaybackState(true);
       }
     }
@@ -1292,6 +1308,9 @@ export class VideoPlayer {
     if (isManual) {
       this.fallbackAttempts = 0;
     }
+    // A new server means no embed reports yet and a fresh patience budget.
+    this._watchdogRearms = 0;
+    this._lastEmbedReportAt = 0;
     this.lastPlayTime = 0;
     if (this.spinner) this.spinner.classList.remove('hidden');
     if (this.statusText) this.statusText.innerText = t('connecting');
@@ -1965,6 +1984,20 @@ export class VideoPlayer {
       this.streamWatchdog = null;
 
       const isEn = (typeof window.getLanguage === 'function' ? window.getLanguage() : getLanguage()) === 'en';
+
+      // If the embed is alive (the native hook keeps reporting video state) but
+      // the content hasn't started yet (slow load, preroll), give THIS server
+      // more time instead of abandoning it. Only fall back when the embed
+      // looks dead (no reports at all).
+      const lastReportAge = this._lastEmbedReportAt ? (Date.now() - this._lastEmbedReportAt) : Infinity;
+      const embedAlive = this.isEmbedMode && lastReportAge < 5000;
+      if (embedAlive && (this._watchdogRearms || 0) < 2) {
+        this._watchdogRearms = (this._watchdogRearms || 0) + 1;
+        console.log('[Player] Embed is alive but content has not started yet. Extending wait instead of switching server...');
+        this.startStreamWatchdog();
+        return;
+      }
+
       if (this.isEmbedMode && (this.fallbackAttempts || 0) < (STREAM_SERVERS.length - 1)) {
         console.log('[Player] Stream timed out after 9s without playback. Auto-switching to backup server...');
         this.triggerStreamAutoFallback();
@@ -2255,7 +2288,7 @@ export class VideoPlayer {
       vidlink: t('serverVidLink') || (isEn ? 'Server 2 (VidLink Ultra - Fast 4K)' : 'Servidor 2 (VidLink Ultra - Rápido 4K)'),
       '2embed': t('server2Embed') || (isEn ? 'Server 3 (2Embed Prime)' : 'Servidor 3 (2Embed Prime)'),
       vidsrc: t('serverVidSrc') || (isEn ? 'Server 4 (VidSrc Pro)' : 'Servidor 4 (VidSrc Pro)'),
-      autoembed: t('serverAutoEmbed') || (isEn ? 'Server 5 (AutoEmbed HD)' : 'Servidor 5 (AutoEmbed HD)')
+      autoembed: t('serverAutoEmbed') || (isEn ? 'Server 5 (AutoEmbed HD - Backup)' : 'Servidor 5 (AutoEmbed HD - Reserva)')
     };
 
     this.settingsOptions.innerHTML = STREAM_SERVERS.map((srv) => {
