@@ -316,7 +316,6 @@ export const TRANSLATIONS = {
     dismiss: "Dismiss",
     serverMultiEmbed: "AnyEmbed VIP - Zero Ads",
     serverVidLink: "VidLink Ultra - Fast 4K",
-    server2Embed: "2Embed Prime",
     serverVidSrc: "VidSrc Pro",
     serverAutoEmbed: "AutoEmbed HD - Backup",
   },
@@ -632,7 +631,6 @@ export const TRANSLATIONS = {
     dismiss: "Cancelar",
     serverMultiEmbed: "AnyEmbed VIP - Sem Anúncios",
     serverVidLink: "VidLink Ultra - Rápido 4K",
-    server2Embed: "2Embed Prime",
     serverVidSrc: "VidSrc Pro",
     serverAutoEmbed: "AutoEmbed HD - Reserva",
   }

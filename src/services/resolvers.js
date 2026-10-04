@@ -7,12 +7,11 @@ import { getItemTitle, getItemDescription, t, getLanguage } from './i18n.js';
 
 // Multi-Engine High-Performance Streaming Servers (Fast 1080p/4K, Subtitles, Zero Ads)
 // NOTE: Array order is the source of truth for server numbering AND the
-// auto-fallback chain: playback starts at Server 1 and falls back 1 -> 2 -> 3 -> 4 -> 5.
+// auto-fallback chain: playback starts at Server 1 and falls back 1 -> 2 -> 3 -> 4.
 // Display numbers are derived from this order via getServerLabel(), never hardcoded.
 export const STREAM_SERVERS = [
   { id: "multiembed", name: "AnyEmbed VIP (Zero Ads & 1080p)", type: "embed" },
   { id: "vidlink", name: "VidLink Ultra (Fast 4K)", type: "embed" },
-  { id: "2embed", name: "2Embed Prime", type: "embed" },
   { id: "vidsrc", name: "VidSrc Pro", type: "embed" },
   { id: "autoembed", name: "AutoEmbed HD (Backup)", type: "embed" }
 ];
@@ -21,7 +20,6 @@ export const STREAM_SERVERS = [
 const SERVER_LABEL_KEYS = {
   multiembed: "serverMultiEmbed",
   vidlink: "serverVidLink",
-  "2embed": "server2Embed",
   vidsrc: "serverVidSrc",
   autoembed: "serverAutoEmbed"
 };
@@ -465,18 +463,13 @@ export function getRealStreamUrl(item, serverId = "multiembed", customSeason = n
     url = isSeries
       ? (tmdbId ? `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?autoplay=true` : `https://vidlink.pro/tv/${imdbId}/${season}/${episode}?autoplay=true`)
       : (tmdbId ? `https://vidlink.pro/movie/${tmdbId}?autoplay=true` : `https://vidlink.pro/movie/${imdbId}?autoplay=true`);
-  } else if (serverId === "2embed") {
-    // Server 3: 2Embed Prime
-    url = isSeries
-      ? `https://www.2embed.cc/embedtv/${imdbId}&s=${season}&e=${episode}`
-      : `https://www.2embed.cc/embed/${imdbId}`;
   } else if (serverId === "vidsrc") {
-    // Server 4: VidSrc Pro
+    // Server 3: VidSrc Pro
     url = isSeries
       ? `https://vidsrc.to/embed/tv/${imdbId}/${season}/${episode}`
       : `https://vidsrc.me/embed/movie?imdb=${imdbId}`;
   } else if (serverId === "autoembed") {
-    // Server 5: AutoEmbed HD (Backup)
+    // Server 4: AutoEmbed HD (Backup)
     url = isSeries
       ? `https://player.autoembed.co/embed/tv/${imdbId}/${season}/${episode}?autoplay=1`
       : `https://player.autoembed.co/embed/movie/${imdbId}?autoplay=1`;

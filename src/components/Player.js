@@ -2077,7 +2077,7 @@ export class VideoPlayer {
     if (!this.currentItem) return;
     this.fallbackAttempts = (this.fallbackAttempts || 0) + 1;
 
-    // Auto-fallback walks STREAM_SERVERS forward: Server 1 -> 2 -> 3 -> 4 -> 5.
+    // Auto-fallback walks STREAM_SERVERS forward: Server 1 -> 2 -> 3 -> 4.
     // The watchdog only calls this while fallbackAttempts < STREAM_SERVERS.length - 1,
     // so it never wraps around to a server that already failed.
     const serverOrder = STREAM_SERVERS.map(s => s.id);
@@ -2331,7 +2331,6 @@ export class VideoPlayer {
     const serverIcons = {
       multiembed: '🎬',
       vidlink: '⚡',
-      '2embed': '🌐',
       vidsrc: '🛡️',
       autoembed: '🚀'
     };
