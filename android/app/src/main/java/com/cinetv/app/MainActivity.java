@@ -678,7 +678,11 @@ public class MainActivity extends BridgeActivity {
             settings.setDatabaseEnabled(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            settings.setAllowFileAccess(true);
+            // Security: disable file and content URL access. The app serves from
+            // http://localhost (Capacitor) and uses no file:// or content:// URLs.
+            // This prevents a malicious iframe from reading local files.
+            settings.setAllowFileAccess(false);
+            settings.setAllowContentAccess(false);
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             settings.setLoadWithOverviewMode(true);
             settings.setUseWideViewPort(true);
