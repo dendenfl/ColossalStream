@@ -1622,8 +1622,10 @@ export class VideoPlayer {
       if (this.manualEmbedMode) {
         this._manualUserTookControl = true;
         try {
-          if (window.AndroidNative && window.AndroidNative.simulateClickAt) {
-            window.AndroidNative.simulateClickAt(0.5, 0.5);
+          // Bridge method is clickAt (JavascriptInterface), not simulateClickAt
+          // (that's the private Java method name in MainActivity).
+          if (window.AndroidNative && window.AndroidNative.clickAt) {
+            window.AndroidNative.clickAt(0.5, 0.5);
           }
         } catch (e) {}
         this.showCenterIndicator("▶");
