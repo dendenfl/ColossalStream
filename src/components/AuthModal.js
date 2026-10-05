@@ -412,6 +412,9 @@ CREATE TABLE IF NOT EXISTS public.user_sync (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.user_sync ENABLE ROW LEVEL SECURITY;
+-- Explicit grants: required for tables created after 2026-10-30, when Supabase
+-- stops auto-granting new public tables (without these the app gets 42501).
+GRANT SELECT, INSERT, UPDATE ON public.user_sync TO authenticated;
 CREATE POLICY "Users can read own sync data" ON public.user_sync FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own sync data" ON public.user_sync FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own sync data" ON public.user_sync FOR UPDATE USING (auth.uid() = user_id);

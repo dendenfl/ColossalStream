@@ -20,6 +20,19 @@ DROP POLICY IF EXISTS "Users can insert own sync data" ON public.user_sync;
 DROP POLICY IF EXISTS "Users can update own sync data" ON public.user_sync;
 DROP POLICY IF EXISTS "Users can delete own sync data" ON public.user_sync;
 
+-- ============================================================================
+-- EXPLICIT DATA API GRANTS (required from 2026-10-30)
+-- Supabase stops auto-granting new public tables to anon/authenticated/
+-- service_role on 2026-10-30. Existing tables keep their grants, but any
+-- NEW table (or fresh project) needs explicit GRANTs or the Data API
+-- returns 42501 permission denied even with correct RLS policies.
+-- These grants only enable the roles at the API layer; the RLS policies
+-- below remain the actual data boundary (each user sees only their row).
+-- No anon grant: auth.uid() policies mean anon could never pass anyway.
+-- No service_role grant: the app is client-only, nothing uses it.
+-- ============================================================================
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_sync TO authenticated;
+
 -- 3. SELECT: users can only read their own row
 CREATE POLICY "Users can read own sync data"
   ON public.user_sync
